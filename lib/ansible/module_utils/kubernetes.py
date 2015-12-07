@@ -80,7 +80,7 @@ class KubernetesClient(object):
         return definition
 
     def update_pod(self, name, containers):
-        data = self.pod_definition(name, containers)
+        data = self.module.jsonify(self.pod_definition(name, containers))
         path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
         pod = self.kube_request(path, 'PUT', data)
 
@@ -90,7 +90,7 @@ class KubernetesClient(object):
         return pod
 
     def create_pod(self, name, containers):
-        data = self.pod_definition(name, containers)
+        data = self.module.jsonify(self.pod_definition(name, containers))
         path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
         pod = self.kube_request(path, 'POST', data)
 
