@@ -86,17 +86,16 @@ class KubernetesClient(object):
 
     def get_pod(self, name):
         path = "api/{0}/namespaces/{1}/pods/{2}".format(self.api_version, self.namespace, name)
-        pod = self.kube_request(path, 'GET', None)
-        return pod
+        return self.kube_request(path, 'GET', None)
 
     def create_pod(self, name, containers):
         data = self.module.jsonify(self.pod_definition(name, containers))
         path = 'api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
-        response = self.kube_request(path, 'POST', data)
+        return self.kube_request(path, 'POST', data)
 
     def delete_pod(self, name):
         path = 'api/{0}/namespaces/{1}/pods/{2}'.format(self.api_version, self.namespace, name)
-        pod = self.kube_request(path, 'DELETE', None)
+        return self.kube_request(path, 'DELETE', None)
 
     def service_definition(self, name, selector, ports):
         definition = { 'apiVersion': self.api_version,
@@ -113,17 +112,16 @@ class KubernetesClient(object):
 
     def get_service(self, name):
         path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
-        service = self.kube_request(path, 'GET', None)
-        return service
+        return self.kube_request(path, 'GET', None)
 
     def create_service(self, name, selector, ports):
         data = self.module.jsonify(self.service_definition(name, selector, ports))
         path = 'api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
-        service = self.kube_request(path, 'POST', data)
+        return self.kube_request(path, 'POST', data)
 
     def delete_service(self, name):
         path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
-        service = self.kube_request(path, 'DELETE', None)
+        return self.kube_request(path, 'DELETE', None)
 
     def replication_controller_definition(self, name, containers, labels, replicas, selector):
         definition = { "kind": "ReplicationController",
@@ -152,17 +150,39 @@ class KubernetesClient(object):
 
     def get_replication_controller(self, name):
         path = 'api/{0}/namespaces/{1}/replicationcontrollers/{2}'.format(self.api_version, self.namespace, name)
-        replication_controller = self.kube_request(path, 'GET', None)
-        return replication_controller
+        return self.kube_request(path, 'GET', None)
 
     def create_replication_controller(self, name, containers, labels, replicas, selector):
         data = self.module.jsonify(self.replication_controller_definition(name, containers, labels, replicas, selector))
         path = 'api/{0}/namespaces/{1}/replicationcontrollers'.format(self.api_version, self.namespace)
-        replication_controller = self.kube_request(path, 'POST', data)
+        return self.kube_request(path, 'POST', data)
 
-    def delete_service(self, name):
+    def delete_replication_controller(self, name):
         path = 'api/{0}/namespaces/{1}/replicationcontrollers/{2}'.format(self.api_version, self.namespace, name)
-        replication_controller = self.kube_request(path, 'DELETE', None)
+        return self.kube_request(path, 'DELETE', None)
+
+    def namespace_definition(self, name):
+        definition = { 'apiVersion': self.api_version,
+                       'kind': 'Namespace',
+                       'metadata': {
+                           'name': name
+                       }
+        }
+        return definition
+
+    def get_namespace(self):
+        path = 'api/{0}/namespaces/{1}'.format(self.api_version, self.namespace)
+        return self.kube_request(path, 'GET', None)
+
+    def create_namespace(self):
+        data = self.module.jsonify(self.namespace_definition(self.namespace))
+        path = 'api/{0}/namespaces/{1}'.format(self.api_version, self.namespace)
+        return self.kube_request(path, 'POST', data)
+
+    def delete_namespace(self, name):
+        path = 'api/{0}/namespaces/{1}'.format(self.api_version, self.namespace)
+        return self.kube_request(path, 'DELETE', None)
+
 
 def kubernetes_argument_spec(**kwargs):
     spec = dict(
