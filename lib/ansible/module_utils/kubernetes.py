@@ -125,6 +125,50 @@ class KubernetesClient(object):
         path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'DELETE', None)
 
+    def replication_controller_definition(self, name, containers, replicas, selector):
+        definition = { "kind": "ReplicationController",
+                       "apiVersion": self.api_version,
+                       "metadata": {
+                           "name": name,
+                           "labels": {
+                               "state": "serving"
+                           }
+                       },
+                       "spec": {
+                           "replicas": replicas,
+                           "selector": selector,
+                           "template": {
+                               "metadata": {
+                                   "name": name,
+                                   "labels": {
+                                       "app": name
+                                   }
+                               },
+                               "spec": {
+                                   "volumes": None,
+                                   "containers": containers,
+                                   "restartPolicy": "Always",
+                                   "dnsPolicy": "ClusterFirst"
+                               }
+                           }
+                       }
+        }
+        return definition
+
+    def get_replication_controller(self, name):
+        path = 'api/{0}/namespaces/{1}/replicationcontrollers/{2}'.format(self.api_version, self.namespace, name)
+        replication_controller = self.kube_request(path, 'GET', None)
+
+    def create_replication_controller(self, name, containers, replicas, selector):
+        data = self.module.jsonify(self.replication_controller_definition(name, containers, replicas, selector))
+        path = 'api/{0}/namespaces/{1}/replicationcontrollers'.format(self.api_version, self.namespace)
+        replication_controller = self.kube_request(path, 'POST', data)
+        return replicatin_controller, data
+
+    def delete_service(self, name):
+        path = 'api/{0}/namespaces/{1}/replicationcontrollers/{2}'.format(self.api_version, self.namespace, name)
+        replication_controller = self.kube_request(path, 'DELETE', None)
+
 def kubernetes_argument_spec(**kwargs):
     spec = dict(
         auth_token = dict(default=None),
