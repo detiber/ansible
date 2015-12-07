@@ -85,7 +85,7 @@ class KubernetesClient(object):
         return pod
 
     def create_pod(self, name, containers):
-        data = self.pod_definiton(name, containers)
+        data = self.pod_definition(name, containers)
         path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
         pod = self.kube_request(path, 'POST', data)
 
