@@ -153,6 +153,7 @@ class KubernetesClient(object):
     def get_replication_controller(self, name):
         path = 'api/{0}/namespaces/{1}/replicationcontrollers/{2}'.format(self.api_version, self.namespace, name)
         replication_controller = self.kube_request(path, 'GET', None)
+        return replication_controller
 
     def create_replication_controller(self, name, containers, labels, replicas, selector):
         data = self.module.jsonify(self.replication_controller_definition(name, containers, labels, replicas, selector))
