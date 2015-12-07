@@ -62,6 +62,11 @@ class KubernetesClient(object):
             self.module.fail_json(msg="Exception type: {0}, message: {1}".format(type(e),str(e)))
 
     def pod_definition(self, name, containers):
+        if not isinstance(containers, list):
+            self.module.fail_json(msg="containers must be a list")
+        if len(containers) == 0:
+            self.module.fail_json(msg="A pod must define at last 1 container")
+
         ''' create a very simple pod definition '''
         definition = {'apiVersion': self.api_version,
                       'kind': 'Pod',
