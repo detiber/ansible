@@ -66,21 +66,68 @@ class KubernetesClient(object):
         ret_obj = self.module.from_json(response.read())
         self.module.exit_json(msg='hi', ret_code=ret_code, ret_obj=ret_obj)
 
-    def update_pod(self, pod_name):
-        pass
+    def pod_definition(self, name, containers):
+        ''' create a very simple pod definition '''
+        definition = {'apiVersion': self.api_version,
+                      'kind': 'Pod',
+                      'metadata': {
+                          'name': name
+                      },
+                      'spec': {
+                          'containers': containers
+                      }
+        }
+        return definition
 
-    def get_pod(self, pod_name):
-#        pod = self.kube_request("/api/{0}/namespaces/{1}/pods/{2}".format(self.api_version,
-#                                                                          self.namespace,
-#                                                                          pod_name),
-#                                'GET', None)
-        pod = self.kube_request("/api/{0}".format(self.api_version), 'GET', None)
+    def update_pod(self, name, containers):
+        data = self.pod_definition(name, containers)
+        path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
+        pod = self.kube_request(path, 'PUT', data)
 
-    def create_pod(self, pod_name):
-        pass
+    def get_pod(self, name):
+        path = "/api/{0}/namespaces/{1}/pods/{2}".format(self.api_version, self.namespace, name)
+        pod = self.kube_request(path, 'GET', None)
+        return pod
 
-    def delete_pod(self, pod_name):
-        pass
+    def create_pod(self, name, containers):
+        data = self.pod_definiton(name, containers)
+        path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
+        pod = self.kube_request(path, 'POST', data)
+
+    def delete_pod(self, name):
+        path = '/api/{0}/namespaces/{1}/pods/{2}'.format(self.api_version, self.namespace, name)
+        pod = self.kube_request(path, 'DELETE', None)
+
+    def service_definition(self, name, selector, ports):
+        definition = { 'apiVersion': self.api_version,
+                       'kind': 'Service',
+                       'metadata': {
+                           'name': name
+                       },
+                       'spec': {
+                           'selector': selector,
+                           'ports': ports
+                       }
+        }
+
+    def update_service(self, name, selector, ports):
+        data = self.service_definition(name, selector, ports)
+        path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
+        service = self.kube_request(path, 'PUT', data)
+
+    def get_service(self, name):
+        path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
+        service = self.kube_request(path, 'GET', None)
+        return service
+
+    def create_service(self, name, selector, ports):
+        data = self.service_definition(name, selector, ports)
+        path = '/api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
+        service = self.kube_request(path, 'POST', data)
+
+    def delete_service(self, name):
+        path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
+        service = self.kube_request(path, 'DELETE', None)
 
 def kubernetes_argument_spec(**kwargs):
     spec = dict(
