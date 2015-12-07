@@ -30,7 +30,6 @@ from ansible.module_utils.urls import *
 from ansible.module_utils.kubernetes import *
 
 """
-
 class KubernetesClient(object):
     def __init__(self, module):
         self.module  = module
@@ -40,31 +39,31 @@ class KubernetesClient(object):
 
     def kube_request(self, path, method, data):
         url = "{0}/{1}".format(self.server, path)
-
+        headers = dict()
         if 'auth_token' in self.module.params:
-            headers = dict(Authorization="Bearer {0}".format(self.module.params['auth_token']))
-        else:
-            headers = None
+            headers['Authorization'] = "Bearer {0}".format(self.module.params['auth_token'])
 
         if 'insecure' in self.module.params:
             validate_certs = not self.module.params['insecure']
         else:
             validate_certs = True
 
-        username = self.module.params.get('username', None)
-        password = self.module.params.get('password', None)
-        if username is not None and password is not None:
-            force_basic_auth = True
-        else:
-            force_basic_auth = False
+        try:
+            r = open_url(url, data=data, headers=headers, method=method,
+                         validate_certs=validate_certs)
+            return self.module.from_json(r.read())
+        except urllib2.HTTPError as e:
+            ret_code = e.code
+            if e.code == 404:
+                return None
+            else:
+                self.module.fail_json(msg="Error code: {0} Reason: {1}".format(ret_code, e.reason))
+        except Exception as e:
+            self.module.fail_json(msg="Exception type: {0}, message: {1}".format(type(e),str(e)))
 
-        response = open_url(url, data=data, headers=headers, method=method,
-                            url_password=password, url_username=username,
-                            validate_certs=validate_certs,
-                            force_basic_auth=force_basic_auth)
-        ret_code = response.getcode()
-        ret_obj = self.module.from_json(response.read())
-        self.module.exit_json(msg='hi', ret_code=ret_code, ret_obj=ret_obj)
+    def verify_namespace_set(self):
+        if self.namespace is None:
+            self.module.fail_json(msg="Namespace is required for this request")
 
     def pod_definition(self, name, containers):
         ''' create a very simple pod definition '''
@@ -80,21 +79,29 @@ class KubernetesClient(object):
         return definition
 
     def update_pod(self, name, containers):
+        self.verify_namespace_set()
+
         data = self.pod_definition(name, containers)
         path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
         pod = self.kube_request(path, 'PUT', data)
 
     def get_pod(self, name):
+        self.verify_namespace_set()
+
         path = "/api/{0}/namespaces/{1}/pods/{2}".format(self.api_version, self.namespace, name)
         pod = self.kube_request(path, 'GET', None)
         return pod
 
     def create_pod(self, name, containers):
+        self.verify_namespace_set()
+
         data = self.pod_definiton(name, containers)
         path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
         pod = self.kube_request(path, 'POST', data)
 
     def delete_pod(self, name):
+        self.verify_namespace_set()
+
         path = '/api/{0}/namespaces/{1}/pods/{2}'.format(self.api_version, self.namespace, name)
         pod = self.kube_request(path, 'DELETE', None)
 
@@ -111,29 +118,34 @@ class KubernetesClient(object):
         }
 
     def update_service(self, name, selector, ports):
+        self.verify_namespace_set()
+
         data = self.service_definition(name, selector, ports)
         path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'PUT', data)
 
     def get_service(self, name):
+        self.verify_namespace_set()
+
         path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'GET', None)
         return service
 
     def create_service(self, name, selector, ports):
+        self.verify_namespace_set()
+
         data = self.service_definition(name, selector, ports)
         path = '/api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
         service = self.kube_request(path, 'POST', data)
 
     def delete_service(self, name):
+        self.verify_namespace_set()
+
         path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'DELETE', None)
 
 def kubernetes_argument_spec(**kwargs):
     spec = dict(
-        username = dict(default=None),
-        password = dict(default=None),
-        kubeconfig = dict(default=None),
         auth_token = dict(default=None),
         server = dict(default='https://localhost:8443'),
         namespace = dict(default=None),
@@ -144,14 +156,7 @@ def kubernetes_argument_spec(**kwargs):
     return spec
 
 def kubernetes_module_kwargs(**kwargs):
-    ret = dict(
-        mutually_exclusive = [
-            ['kubeconfig', 'username'],
-            ['kubeconfig', 'password'],
-            ['kubeconfig', 'auth_token'],
-            ['password', 'auth_token']
-        ]
-    )
+    ret = dict()
 
     for key in ('mutually_exclusive', 'required_together', 'required_one_of'):
         if key in kwargs:
