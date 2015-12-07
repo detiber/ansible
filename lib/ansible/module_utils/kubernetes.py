@@ -40,6 +40,9 @@ class KubernetesClient(object):
     def kube_request(self, path, method, data):
         url = "{0}/{1}".format(self.server, path)
         headers = dict()
+        if 'data' is not None:
+            headers['Content-Type'] = 'application/json'
+
         if 'auth_token' in self.module.params:
             headers['Authorization'] = "Bearer {0}".format(self.module.params['auth_token'])
 
@@ -51,6 +54,7 @@ class KubernetesClient(object):
         try:
             r = open_url(url, data=data, headers=headers, method=method,
                          validate_certs=validate_certs)
+
             return self.module.from_json(r.read())
         except urllib2.HTTPError as e:
             ret_code = e.code
@@ -71,7 +75,8 @@ class KubernetesClient(object):
         definition = {'apiVersion': self.api_version,
                       'kind': 'Pod',
                       'metadata': {
-                          'name': name
+                          'name': name,
+                          'namespace': self.namespace
                       },
                       'spec': {
                           'containers': containers
@@ -79,23 +84,18 @@ class KubernetesClient(object):
         }
         return definition
 
-    def update_pod(self, name, containers):
-        data = self.module.jsonify(self.pod_definition(name, containers))
-        path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
-        pod = self.kube_request(path, 'PUT', data)
-
     def get_pod(self, name):
-        path = "/api/{0}/namespaces/{1}/pods/{2}".format(self.api_version, self.namespace, name)
+        path = "api/{0}/namespaces/{1}/pods/{2}".format(self.api_version, self.namespace, name)
         pod = self.kube_request(path, 'GET', None)
         return pod
 
     def create_pod(self, name, containers):
         data = self.module.jsonify(self.pod_definition(name, containers))
-        path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
-        pod = self.kube_request(path, 'POST', data)
+        path = 'api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
+        response = self.kube_request(path, 'POST', data)
 
     def delete_pod(self, name):
-        path = '/api/{0}/namespaces/{1}/pods/{2}'.format(self.api_version, self.namespace, name)
+        path = 'api/{0}/namespaces/{1}/pods/{2}'.format(self.api_version, self.namespace, name)
         pod = self.kube_request(path, 'DELETE', None)
 
     def service_definition(self, name, selector, ports):
@@ -110,23 +110,18 @@ class KubernetesClient(object):
                        }
         }
 
-    def update_service(self, name, selector, ports):
-        data = self.module.jsonify(self.service_definition(name, selector, ports))
-        path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
-        service = self.kube_request(path, 'PUT', data)
-
     def get_service(self, name):
-        path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
+        path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'GET', None)
         return service
 
     def create_service(self, name, selector, ports):
         data = self.module.jsonify(self.service_definition(name, selector, ports))
-        path = '/api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
+        path = 'api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
         service = self.kube_request(path, 'POST', data)
 
     def delete_service(self, name):
-        path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
+        path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'DELETE', None)
 
 def kubernetes_argument_spec(**kwargs):
