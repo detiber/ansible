@@ -109,6 +109,7 @@ class KubernetesClient(object):
                            'ports': ports
                        }
         }
+        return definition
 
     def get_service(self, name):
         path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
