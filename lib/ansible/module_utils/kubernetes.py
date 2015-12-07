@@ -61,10 +61,6 @@ class KubernetesClient(object):
         except Exception as e:
             self.module.fail_json(msg="Exception type: {0}, message: {1}".format(type(e),str(e)))
 
-    def verify_namespace_set(self):
-        if self.namespace is None:
-            self.module.fail_json(msg="Namespace is required for this request")
-
     def pod_definition(self, name, containers):
         ''' create a very simple pod definition '''
         definition = {'apiVersion': self.api_version,
@@ -79,29 +75,21 @@ class KubernetesClient(object):
         return definition
 
     def update_pod(self, name, containers):
-        self.verify_namespace_set()
-
         data = self.pod_definition(name, containers)
         path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
         pod = self.kube_request(path, 'PUT', data)
 
     def get_pod(self, name):
-        self.verify_namespace_set()
-
         path = "/api/{0}/namespaces/{1}/pods/{2}".format(self.api_version, self.namespace, name)
         pod = self.kube_request(path, 'GET', None)
         return pod
 
     def create_pod(self, name, containers):
-        self.verify_namespace_set()
-
         data = self.pod_definiton(name, containers)
         path = '/api/{0}/namespaces/{1}/pods'.format(self.api_version, self.namespace)
         pod = self.kube_request(path, 'POST', data)
 
     def delete_pod(self, name):
-        self.verify_namespace_set()
-
         path = '/api/{0}/namespaces/{1}/pods/{2}'.format(self.api_version, self.namespace, name)
         pod = self.kube_request(path, 'DELETE', None)
 
@@ -118,29 +106,21 @@ class KubernetesClient(object):
         }
 
     def update_service(self, name, selector, ports):
-        self.verify_namespace_set()
-
         data = self.service_definition(name, selector, ports)
         path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'PUT', data)
 
     def get_service(self, name):
-        self.verify_namespace_set()
-
         path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'GET', None)
         return service
 
     def create_service(self, name, selector, ports):
-        self.verify_namespace_set()
-
         data = self.service_definition(name, selector, ports)
         path = '/api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
         service = self.kube_request(path, 'POST', data)
 
     def delete_service(self, name):
-        self.verify_namespace_set()
-
         path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'DELETE', None)
 
@@ -148,7 +128,7 @@ def kubernetes_argument_spec(**kwargs):
     spec = dict(
         auth_token = dict(default=None),
         server = dict(default='https://localhost:8443'),
-        namespace = dict(default=None),
+        namespace = dict(default='default'),
         api_version = dict(default='v1', choices=['v1']),
         insecure = dict(default=False, type='bool')
     )
