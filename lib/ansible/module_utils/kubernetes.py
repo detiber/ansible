@@ -111,7 +111,7 @@ class KubernetesClient(object):
         }
 
     def update_service(self, name, selector, ports):
-        data = self.service_definition(name, selector, ports)
+        data = self.module.jsonify(self.service_definition(name, selector, ports))
         path = '/api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'PUT', data)
 
@@ -121,7 +121,7 @@ class KubernetesClient(object):
         return service
 
     def create_service(self, name, selector, ports):
-        data = self.service_definition(name, selector, ports)
+        data = self.module.jsonify(self.service_definition(name, selector, ports))
         path = '/api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
         service = self.kube_request(path, 'POST', data)
 
