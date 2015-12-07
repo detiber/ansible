@@ -125,7 +125,7 @@ class KubernetesClient(object):
         path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         service = self.kube_request(path, 'DELETE', None)
 
-    def replication_controller_definition(self, name, containers, replicas, selector):
+    def replication_controller_definition(self, name, containers, labels, replicas, selector):
         definition = { "kind": "ReplicationController",
                        "apiVersion": self.api_version,
                        "metadata": {
@@ -136,7 +136,8 @@ class KubernetesClient(object):
                            "selector": selector,
                            "template": {
                                "metadata": {
-                                   "name": name
+                                   "name": name,
+                                   "labels": labels,
                                },
                                "spec": {
                                    "volumes": None,
@@ -153,8 +154,8 @@ class KubernetesClient(object):
         path = 'api/{0}/namespaces/{1}/replicationcontrollers/{2}'.format(self.api_version, self.namespace, name)
         replication_controller = self.kube_request(path, 'GET', None)
 
-    def create_replication_controller(self, name, containers, replicas, selector):
-        data = self.module.jsonify(self.replication_controller_definition(name, containers, replicas, selector))
+    def create_replication_controller(self, name, containers, labels, replicas, selector):
+        data = self.module.jsonify(self.replication_controller_definition(name, containers, labels, replicas, selector))
         path = 'api/{0}/namespaces/{1}/replicationcontrollers'.format(self.api_version, self.namespace)
         replication_controller = self.kube_request(path, 'POST', data)
 
