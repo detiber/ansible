@@ -34,8 +34,34 @@ from ansible.module_utils.openshift import *
 """
 
 class OpenShiftClient(KubernetesClient):
-    pass
+    def __init__(self, module):
+        self.module  = module
+        self.server = module.params['server']
+        self.project = module.params['project']
+        self.api_version = module.params['api_version']
+        KubernetesClient.__init__(self, module)
 
+    def project_definition(self, name):
+        definition = { 'apiVersion': self.api_version,
+                       'kind': 'Project',
+                       'metadata': {
+                           'name': name
+                       }
+        }
+        return definition
+
+    def get_project(self):
+        path = 'api/{0}/projects/{1}'.format(self.api_version, self.project)
+        return self.kube_request(path, 'GET', None)
+
+    def create_project(self):
+        data = self.module.jsonify(self.project_definition(self.project))
+        path = 'api/{0}/projects/{1}'.format(self.api_version, self.project)
+        return self.kube_request(path, 'POST', data)
+
+    def delete_project(self, name):
+        path = 'api/{0}/projects/{1}'.format(self.api_version, self.project)
+        return self.kube_request(path, 'DELETE', None)
 
 def openshift_argument_spec(**kwargs):
     spec = kubernetes_argument_spec()
