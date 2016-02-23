@@ -709,6 +709,14 @@ def open_url(url, data=None, headers=None, method=None, use_proxy=True,
         context.check_hostname = False
         urlopen_args += (None, None, None, context)
 
+#    if request.get_method() != 'GET' and 'replicationcontrollers' in  request.get_full_url() :
+#        output = "urlopen_args: {0} ".format(urlopen_args)
+#        output += "request: method: {0} ".format(request.get_method())
+#        output += "full_url: {0} ".format(request.get_full_url())
+#        output += "headers: {0} ".format(request.header_items())
+#        output += "data: {0} ".format(request.get_data())
+#        raise Exception(output)
+#
     r = urllib2.urlopen(*urlopen_args)
     return r
 

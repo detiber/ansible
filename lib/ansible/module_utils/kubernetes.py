@@ -43,8 +43,13 @@ class KubernetesClient(object):
         if 'data' is not None:
             headers['Content-Type'] = 'application/json'
 
-        if 'auth_token' in self.module.params:
-            headers['Authorization'] = "Bearer {0}".format(self.module.params['auth_token'])
+        auth_token = self.module.params['auth_token']
+        if auth_token is not None:
+            headers['Authorization'] = "Bearer {0}".format(auth_token)
+
+        username = self.module.params.get('username', None)
+        password = self.module.params.get('password', None)
+        basic_auth = True if username is not None and password is not None else False
 
         if 'insecure' in self.module.params:
             validate_certs = not self.module.params['insecure']
@@ -53,7 +58,8 @@ class KubernetesClient(object):
 
         try:
             r = open_url(url, data=data, headers=headers, method=method,
-                         validate_certs=validate_certs)
+                         validate_certs=validate_certs, url_username=username,
+                         url_password=password, force_basic_auth=basic_auth)
 
             return self.module.from_json(r.read())
         except urllib2.HTTPError as e:
@@ -61,7 +67,7 @@ class KubernetesClient(object):
             if e.code == 404:
                 return None
             else:
-                self.module.fail_json(msg="Error code: {0} Reason: {1}".format(ret_code, e.reason))
+                self.module.fail_json(msg="Error code: {0} Reason: {1}".format(ret_code, e.reason, str(e)))
         except Exception as e:
             self.module.fail_json(msg="Exception type: {0}, message: {1}".format(type(e),str(e)))
 
@@ -97,25 +103,33 @@ class KubernetesClient(object):
         path = 'api/{0}/namespaces/{1}/pods/{2}'.format(self.api_version, self.namespace, name)
         return self.kube_request(path, 'DELETE', None)
 
-    def service_definition(self, name, selector, ports):
+    def service_definition(self, name, labels, selector, ports, service_type=None):
+        for port in ports:
+            if 'port' in port and not isinstance(port['port'], int):
+                port['port'] = int(port['port'])
+
         definition = { 'apiVersion': self.api_version,
                        'kind': 'Service',
                        'metadata': {
-                           'name': name
+                           'name': name,
+                           'labels': labels
                        },
                        'spec': {
                            'selector': selector,
                            'ports': ports
                        }
         }
+        if service_type is not None:
+            definition['spec']['type'] = service_type
+
         return definition
 
     def get_service(self, name):
         path = 'api/{0}/namespaces/{1}/services/{2}'.format(self.api_version, self.namespace, name)
         return self.kube_request(path, 'GET', None)
 
-    def create_service(self, name, selector, ports):
-        data = self.module.jsonify(self.service_definition(name, selector, ports))
+    def create_service(self, name, labels, selector, ports, service_type=None):
+        data = self.module.jsonify(self.service_definition(name, labels, selector, ports, service_type=service_type))
         path = 'api/{0}/namespaces/{1}/services'.format(self.api_version, self.namespace)
         return self.kube_request(path, 'POST', data)
 
@@ -124,29 +138,37 @@ class KubernetesClient(object):
         return self.kube_request(path, 'DELETE', None)
 
     def replication_controller_definition(self, name, containers, labels, replicas, selector):
+        if not isinstance(replicas, int):
+            replicas = int(replicas)
+        for container in containers:
+            if 'ports' in container:
+                for port in container['ports']:
+                    for item in ('hostPort', 'containerPort', 'port'):
+                        if item in port and not isinstance(port[item], int):
+                            port[item] = int(port[item])
+
         definition = { "kind": "ReplicationController",
                        "apiVersion": self.api_version,
                        "metadata": {
-                           "name": name
+                           "name": name,
+                           "labels": labels
                        },
                        "spec": {
                            "replicas": replicas,
                            "selector": selector,
                            "template": {
                                "metadata": {
-                                   "name": name,
-                                   "labels": labels,
+                                   "labels": labels
                                },
                                "spec": {
-                                   "volumes": None,
-                                   "containers": containers,
-                                   "restartPolicy": "Always",
-                                   "dnsPolicy": "ClusterFirst"
+                                   "containers": containers
                                }
                            }
                        }
         }
+        #self.module.fail_json(msg=definition)
         return definition
+
 
     def get_replication_controller(self, name):
         path = 'api/{0}/namespaces/{1}/replicationcontrollers/{2}'.format(self.api_version, self.namespace, name)
@@ -176,7 +198,7 @@ class KubernetesClient(object):
 
     def create_namespace(self):
         data = self.module.jsonify(self.namespace_definition(self.namespace))
-        path = 'api/{0}/namespaces/{1}'.format(self.api_version, self.namespace)
+        path = 'api/{0}/namespaces'.format(self.api_version)
         return self.kube_request(path, 'POST', data)
 
     def delete_namespace(self, name):
@@ -187,6 +209,8 @@ class KubernetesClient(object):
 def kubernetes_argument_spec(**kwargs):
     spec = dict(
         auth_token = dict(default=None),
+        username = dict(default=None),
+        password = dict(default=None),
         server = dict(default='https://localhost:8443'),
         namespace = dict(default='default'),
         api_version = dict(default='v1', choices=['v1']),
